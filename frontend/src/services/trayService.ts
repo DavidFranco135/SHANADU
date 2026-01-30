@@ -1,8 +1,5 @@
-import axios from 'axios';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-/* ============================
-   TIPAGENS
-============================ */
 export type TrayCategory = {
   id: string;
   name: string;
@@ -26,14 +23,10 @@ export type BusinessContext = {
 /* ============================
    SERVICE
 ============================ */
-export const trayService = {
+const trayService = {
 
   /* ---------- CONTEXTO DO VENDEDOR ---------- */
   fetchTrayBusinessContext: async (email: string, token: string): Promise<BusinessContext> => {
-    // 🔐 Aqui é onde você liga vendedor → regras de negócio
-    // No futuro isso vem de backend / firebase / api
-    // Por enquanto mock estruturado (mas já funcional)
-
     return {
       sellerId: email,
       sellerEmail: email,
@@ -91,3 +84,5 @@ export const trayService = {
   }
 
 };
+
+export default trayService;
