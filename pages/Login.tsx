@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 interface LoginProps {
-  onLogin: (email: string, password?: string) => void;
+  onLogin: (context: any) => void;
   onRegister: (name: string, category: string, email: string, password?: string) => void;
 }
 
@@ -20,14 +20,50 @@ const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [category, setCategory] = useState(USER_CATEGORIES[0]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
     if (isRegister) {
       onRegister(name, category, email, password);
       setIsRegister(false);
-    } else {
-      onLogin(email, password);
+      return;
+    }
+
+    // 🔐 LOGIN REAL COM TRAY
+    try {
+      setLoading(true);
+
+      // 👉 Aqui é o FETCH que integra com o backend
+      const res = await fetch(`http://localhost:3001/api/tray/context?email=${email}`);
+
+      if (!res.ok) {
+        throw new Error('Usuário não encontrado na Tray');
+      }
+
+      const context = await res.json();
+
+      /**
+       * context = {
+       *   customer,
+       *   cnpjs,
+       *   groups,
+       *   categories,
+       *   priceTable
+       * }
+       */
+
+      // envia o contexto completo pro sistema
+      onLogin(context);
+
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Erro ao conectar com o servidor');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -121,8 +157,17 @@ const Login: React.FC<LoginProps> = ({ onLogin, onRegister }) => {
               />
             </div>
 
-            <button className="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-xl transition-all shadow-xl shadow-slate-200 active:scale-95">
-              {isRegister ? 'Solicitar Cadastro' : 'Acessar Catálogo'}
+            {error && (
+              <div className="bg-red-100 text-red-600 p-3 rounded-xl text-sm font-bold">
+                {error}
+              </div>
+            )}
+
+            <button 
+              disabled={loading}
+              className="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-xl transition-all shadow-xl shadow-slate-200 active:scale-95 disabled:opacity-50"
+            >
+              {loading ? 'Conectando...' : (isRegister ? 'Solicitar Cadastro' : 'Acessar Catálogo')}
             </button>
             
             <div className="pt-6 text-center border-t border-slate-200">
