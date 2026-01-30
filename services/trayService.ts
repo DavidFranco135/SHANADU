@@ -1,67 +1,75 @@
+import axios from "axios";
 
-import { Product, TrayCategory, CNPJ } from '../types';
-
-// Mapeamento de permissões: Grupo Tray -> Categorias permitidas no B2B
-const TRAY_GROUP_CONFIG: Record<string, { label: string, color: string, categories: string[] }> = {
-  'group_basic': { 
-    label: 'Lojista B2B', 
-    color: 'bg-blue-500',
-    categories: ['cat_prof', 'cat_maint'] 
-  },
-  'group_premium': { 
-    label: 'Distribuidor Ouro', 
-    color: 'bg-emerald-500',
-    categories: ['cat_prof', 'cat_maint', 'cat_treat', 'cat_kits'] 
-  },
-  'group_vip': { 
-    label: 'Parceiro VIP', 
-    color: 'bg-purple-600',
-    categories: ['cat_prof', 'cat_maint', 'cat_treat', 'cat_kits', 'cat_exclusive'] 
+const api = axios.create({
+  baseURL: process.env.TRAY_API_URL,
+  headers: {
+    "Content-Type": "application/json"
   }
-};
+});
 
-// URL Base da sua API Tray (substitua pela sua quando tiver o token)
-const TRAY_API_URL = 'https://api.tray.com.br'; 
+// 🔐 Token
+export async function getTrayToken() {
+  const res = await axios.post(`${process.env.TRAY_API_URL}/auth/token`, {
+    client_id: process.env.TRAY_CLIENT_ID,
+    client_secret: process.env.TRAY_CLIENT_SECRET,
+    store_code: process.env.TRAY_STORE_CODE
+  });
 
-export const trayService = {
-  /**
-   * Sincronização de Perfil
-   * Integração real: Deve chamar GET /customers/{id} ou buscar por e-mail na Tray
-   */
-  fetchTrayBusinessContext: async (email: string): Promise<{ cnpjIds: string[], trayRules: any }> => {
-    // Para produção: usar fetch(`${TRAY_API_URL}/customers?email=${email}`, { headers: { 'Authorization': `Bearer ${token}` } })
-    await new Promise(resolve => setTimeout(resolve, 1500)); 
-    
-    if (email.includes('vip')) {
-      return { 
-        cnpjIds: ['c1', 'c2', 'c3'], 
-        trayRules: { group: 'group_vip', description: 'VIP detectado na Tray' } 
-      };
-    }
-    return { 
-      cnpjIds: ['c1'], 
-      trayRules: { group: 'group_basic', description: 'Perfil Lojista Padrão' } 
-    };
-  },
+  return res.data.access_token;
+}
 
-  filterProductsByGroup: (allProducts: Product[], groupId: string = 'group_basic'): Product[] => {
-    const config = TRAY_GROUP_CONFIG[groupId] || TRAY_GROUP_CONFIG['group_basic'];
-    return allProducts.filter(p => config.categories.includes(p.trayCategoryId));
-  },
+// 🔎 Cliente por email
+export async function getCustomerByEmail(email, token) {
+  const res = await api.get(`/customers?email=${email}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data?.data?.[0];
+}
 
-  getAvailableCategories: async (groupId: string = 'group_basic'): Promise<TrayCategory[]> => {
-    const allCategories = [
-      { id: 'cat_prof', name: 'Linha Profissional' },
-      { id: 'cat_maint', name: 'Manutenção' },
-      { id: 'cat_treat', name: 'Tratamento' },
-      { id: 'cat_kits', name: 'Kits Exclusivos' },
-      { id: 'cat_exclusive', name: 'Exclusivo VIP' }
-    ];
-    const config = TRAY_GROUP_CONFIG[groupId] || TRAY_GROUP_CONFIG['group_basic'];
-    return allCategories.filter(c => config.categories.includes(c.id));
-  },
+// 🧾 CNPJs
+export async function getCustomerCNPJs(customerId, token) {
+  const res = await api.get(`/customers/${customerId}/cnpjs`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data?.data || [];
+}
 
-  getGroupLabel: (groupId?: string) => TRAY_GROUP_CONFIG[groupId || 'group_basic']?.label || 'Padrão',
-  getGroupName: (groupId?: string) => TRAY_GROUP_CONFIG[groupId || 'group_basic']?.label || 'Padrão',
-  getGroupColor: (groupId?: string) => TRAY_GROUP_CONFIG[groupId || 'group_basic']?.color || 'bg-slate-500'
-};
+// 👥 Grupo
+export async function getCustomerGroups(customerId, token) {
+  const res = await api.get(`/customers/${customerId}/groups`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data?.data || [];
+}
+
+// 🗂️ Categorias
+export async function getCategories(token) {
+  const res = await api.get(`/categories`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data?.data || [];
+}
+
+// 📦 Produtos
+export async function getProducts(token) {
+  const res = await api.get(`/products`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data?.data || [];
+}
+
+// 💰 Tabela de preço
+export async function getPriceTable(customerId, token) {
+  const res = await api.get(`/customers/${customerId}/price-table`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data;
+}
+
+// 🧾 Pedido real
+export async function createOrder(payload, token) {
+  const res = await api.post(`/orders`, payload, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return res.data;
+}
