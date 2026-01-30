@@ -23,7 +23,7 @@ export const db = getFirestore(app);
 
 // Inicialização do Analytics (apenas em navegadores suportados)
 export const analytics = typeof window !== 'undefined' ? 
-  isSupported().then(yes => yes ? getAnalytics(app) : null) : 
+  isSupported().then((yes: boolean) => yes ? getAnalytics(app) : null) : 
   null;
 
 export default app;
